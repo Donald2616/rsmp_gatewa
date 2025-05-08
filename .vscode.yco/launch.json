@@ -1,0 +1,39 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "(gdb) Launch",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/test/rsmp-gateway",
+            //"program": "${workspaceFolder}/Build/cache/x86_64/rsmp-gateway",
+            // "args": ["--fhs-all=.", "-r","vers:1.25,vers:4,vers:6.2", "-u 101" ],
+            "args": ["--fhs-all=.", "-f", "SUPERVISION_IROAD@Socket:tcp:172.16.8.1:12111",  "-r vers:3.2.1", "-l", "SVMS LCR Gateway"],
+            // "args": ["--fhs-all=.", "-f SUPERVISION_IROAD@Socket:tcp:192.168.0.19:12111",  "-r vers:3.2.1"],
+            // "args": ["--fhs-all=.", "-l", "pmv-svms", "-f", "SUPERVISION_IROAD@Serial:/dev/ttyS1:19200:8:1:n:l",  "-r vers:3.2.1"],
+            //"args": ["--fhs-all=.", "-r","vers:1.25,vers:4,vers:6.2", "-u 3"],
+            "stopAtEntry": true,
+            // "cwd": "${fileDirname}",
+            "cwd": "${workspaceFolder}/test",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ]
+        }
+
+    ]
+}

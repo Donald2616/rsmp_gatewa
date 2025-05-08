@@ -1,0 +1,20 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "/home/vva/svmsrep/workspace-ser/Libraries/src/**",
+                "${workspaceFolder}/**",
+                "${workspaceFolder}/../Libraries/src/**"
+                // "/home/yann/newdev/Libraries/src"
+            ],
+            "defines": [],
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "c17",
+            "cppStandard": "c++14",
+            "intelliSenseMode": "linux-clagccng-x64",
+            "configurationProvider": "ms-vscode.makefile-tools"
+        }
+    ],
+    "version": 4
+}

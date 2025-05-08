@@ -1,0 +1,109 @@
+= Test RSMP Core en C: RSMP-Gateway
+
+== Objectifs
+
+Réaliser une application de test des capacités d'intégration de RSMP sur les cibles de productions.
+
+Les principes de base du projet sont simulaires à ceux mis en œuvre en 2021 sur la poc appellée à l'époque _bas à sable_.
+
+Il s'agit de mettre en œuvre une passerelle RSMp qui encapsule des messages LCR et/ou DIASER pour les distribuer en local.
+
+En 2021 les passerelles (proxy et reverse-proxy) étaient extérieurs aux cibles métiers et écritent en java. Aujourd'hui on passe :
+
+* sur une cible métier dite carte Pilote,
+* sur un environnement de programmation C (au liue de Java)
+
+== Principes
+Les principes de ce projet s'appuient sur les documents suivants :
+
+* la documentation RSMP (dont RSMP-spec-3.2)
+* la défintion des 
+
+
+== Mode de fonctionnement
+
+`rsmp-gateway` est un service intégré sur une carte Pilote 17 :
+
+* il établit une ou plusieurs connexions RSMP vers des équipements dits de supervision pour maintenir un lien RSMP,
+* il attend des messages de type `CommandRequest` dont le contenu est une trame de type LCR ou DIASER (pour SVMS LCR)
+* il transfert la trame vers le programme applicatif embarqué sur la cible
+* il récupère la réponse de l'équipement
+* il transfert la réponse vers le demandeur RSMP dans des messages CommandResponse
+
+En plus de ce fonctionnement décrit sommairement, le programme répond aux sollicitations protocolaire de RSMP (watchdog, négociation initiale, etc.)
+
+=== et TEDI ?
+Le programem `rsmp-gateway` est _bête à manger du foin_. Il ne fait aucune interprétation sur les informations LCR, il agit en simple passe-plat.
+
+Cela étant dit, il est plus que probable qu'il faille contrôler le type de TEDI utilisé pour déterminer les fins de trames de réponse.
+
+|===
+| TEDI | deb trame | fin trame | CRC
+
+| base | STX ou ENQ | ETX ou ETB | Oui
+| test | -  | LF | non
+| terminal | | LF | non
+|===
+
+Le premier caractère de la trame indique le mode de TEDI et donc le délimiteur de fin. 
+
+L'alternative possible est de sortir de l'attente sur timeout intercaractère, cela suppose que le flux est constant...
+
+=== Schéma
+[ditaa]
+----
++------------------------------------------+
+| Carte Pilote STS                         |
+|                                          |
+| /---------\             /--------------\ |
+| |         |  TEDI/LCR   |              | |
+| |   PIP   |<----------->| RSMP-Gateway | |
+| |         |             |              | |
+| \---------/             \--------------/ |
+|                                 ^        |
++---------------------------------|--------+
+                                  | 
+                                  | RSMP + SXL 
+                                  | 
+                                  |
+                                  v
+                     +---------------------------+
+                     |                           |
+                     | Équipement de Supervision |
+                     |                           |
+                     +---------------------------+
+----
+
+=== Test clients/Serveur
+
+Base de données d'authentification : `test/auth.db`
+```console	
+6;to;plugfest1;SUPERVISION_SVMS;plugfest2MDP+;0;
+7;from;plugfest1;SUPERVISION_SVMS;plugfest2MDP+;0;
+```
+Démarrage client(s) :
+```console
+cd test
+../Build/cache/x86_64/rsmp-gateway --fhs-all=. -f 127.0.0.1:12111 -l CLI3NT_01 -p SUPERVISION_SVMS
+```
+Lancer plusieurs instances de clients pour simuler plusieurs équipements (ajouter des mots de passe différents dans la base de données d'authentification).
+
+
+Démarrage serveur :
+Base de données d'authentification : `testServer/auth.db`
+```console
+6;to;plugfest1;CLI3NT_01;plugfest2MDP+;0;
+7;from;plugfest1;CLI3NT_01;plugfest2MDP+;0;
+```
+
+```console
+cd testServer
+../Build/cache/x86_64/rsmp-gateway --fhs-all=. -S -l SUPERVISION_SVMS -p CLI3NT_01
+```
+
+Observer les échanges en clair de CipherAgreement.
+
+
+//www.plantuml.com/plantuml/png/lLN1RXit4BtlLppOXpP0Da1qD0etKjC61O9MQ7CB38FB7KcikIH33cNvRtfLVsD_hAIi5ILeqqONdxJGctcSntapV1TOU8wThbpwLL8vOHW_RvYy4JhSJz-y_IeogHgxmTMSoDzFht3zKIrNFDEHgbQmQ4GWpDw_l__q-mb33i-q8tycHZ8j4cjrH3qRg3zuUZhFcerHpOwfgXCvg6yFDTpWYWRi2f-rNIe3SLSDEEeK_ApXfi0GQw6qQ3JXnnBwGrqVGkr3ENC0ow4PBdb3ERDTES5sXD6QJcx-ICJaVqIKs7Gf_ta2Iar5jLoHV81xn3wiMdeR7JvjyDDAQ4rcIGS8evT1fhKBhHPqp09ZcM3Nv8iXK4CP9jygJs0RGmgAQn9nWouiIys8hBGAmd2Xg-54G4F1AeEMiEwtNYqKUNo9tqMJPNG9yPHuVQ9IWGaLu5Nu4YbdIAiJgRAxz0dae2vWMj_EG8nPVJj5_pSqvRATyEaBpbksAPUgB7GdguAGhDQ2gLp8zLoPXtDWCW0lRj7VxEcX2VryxQczEt6gfqKCr5Qus7sd6UVaaq9-cVRcxiBPQRxYx0zave-b9SEkmXWxRehTZmPhB-hRvWk_J7_zU6Ryb9JT6nGciCrVn07ogKbe8qA_3GZH9uIzCC5Pdz1MBHR9t6GulAwE_El8y-wZen34al0zyRElkouQ9GKhQrublH5TAj7iG2toEJ9gghBSrPEpl7gJr8Q4gKun-UpujwK0f4oV1oGaCA3Q7TD5pSffsf3FIieORX8BcRsaLsL4K0tgZng-l-Rb_F4FDzwoFnyLorNkMajdVMlfREp6_foCxnxKY6POE0WaFJ4SHKR_JnOiXPPHzzlNIB6IuWREzrlPRrlgyctkbr9kcRFHvoXzs8nehLgJ6RZQVii-AWufg1KcF2yxJG7I6ixUoSWmAZcP8TPM-TmlAPoGYlijsXsJj2tvNFlSccKA8vcYdeLeJP2fvgFLb3ukVmvVxAqQF-62nsqqzbqI7JlzBm00
+
+//www.plantuml.com/plantuml/png/bLJDZjis4BxpAJxOXpP0520wBefjhAOfYgRemjTW4T3Kn6P3aIevT6rW7wPNzpNqOXqvjgM5rJQ-sVf-vflHZDuarf5puzGgx31x88eV5pFCtzlrXd-Aj5UjuDROLdl65_ZLwwc7fI9VGrpKoAewMrKkqxMgchAgnAhMh5Sw4QgtRp--M_xsws3-JF3ZZYbwxT9WDO6KIftBuRlYqiKTPdHcpV31XRNrq8y3joZkBm7ki2R-XVOJFF4iHhpFChHnzQ5czRyror6-yj-upreRcVU251h2fEhfwKcfTGovnNA77pRQEV9hmecW52PdD30LV612s58StXuAQ6EePHfP9WiJV6tP1fzWVP-64bBmZDWTihUKq8OSuGYH36s3ZRrLjEcFJ29spYOHeqHDZVQryCtPFc5Ht5SWHbNSBz3zrNkcaEj8QFNHius1WxYG0ldwIsubGTbkDTFGwFp1-i_NG7a2HYCPRu9qkdxuSv1TaA_VijNZZIiYWakPVYz7x20Tr7GTvddw8Sun_R8TYoxCgOVbz8j7WUm5oLlI6ObC94PBcT7zpP5Wj3FPTOUN4AwXl4ChxybqXvgQXZmZitKsTOVJAWZBNROHTR1RycUlkZjmp9QJa6hj4pZa9FJKxndtqqgdGEVk87pgNHZMdLp8co1Eq5ioSDzeRonvJp2I4jyFgt9rO1_cIweV_-FEC2z7fuPtYv_VJmojx5SyMPG8gz-94yn-9UXA7uUGSXI4exJNXYXeRJzzwWwHFAUNwdmQDQ6boCSV3QMaruHlYVk_9ZHDzjRe_knUAEYCHbBw8-XqNyTaHwhVXis-3RnvXJiamMnZcM9_IQ-7011b99H80gPZaIOxjgsZdP2JnOfIiBvttua7-LD3ByP79xzk-lRU_k6ytNpompafU2FnS-F-0G00

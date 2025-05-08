@@ -1,0 +1,240 @@
+= Build: Construction d'un projet
+
+L'objet de ce dépôt est de mettre à disposition des projets embarqués une méthode de 
+construction basée sur le passif des projets précédents issus de svn.
+
+La _nouveauté_ de la proposition est d'externalisé le dépôt de la mécanique de 
+construction comme un module git. Ce qui permet de récupérer la dernière version 
+du dépôt pour le projet en cours de contruction puis de de figer la version, et 
+le cas échéant de mettre à jour le module Build depui le dépôt.
+
+== Mode de fonctionnement
+Le mode de fonctionnement du module Build est similaire à celui de ses versions
+antérieures, quelques modifications ont été apportées sur sa configuration.
+
+=== Comme avant
+
+La construction du projet est faite depuis le répertoire Build en utilisant `make`
+suivi d'une cible (_target_) qui représente l'architecture de la carte cible 
+(`x64_86`, `arm`, `p17`, `p17s`, etc.)
+
+=== Nouveautés
+Intégration des programmes de tests:: une notion de test unitaire est ajoutée.
+Ces tests sont écrits dans une répertoire spécifique des sources (`src/test`).
+Ils sont intégrés au projet si la variable d'environnement `WITH_TEST` est 
+définie au moment de l'éxécution du make.
++
+Si cette variable n'est pas définie, alors les sources dans l'arborescence 
+`src/test` ne sont pas inclus dans la construction. 
++
+Si `WITH_TEST` est définie, alors 
++
+--
+. les de tests sources sont inclus dans la construction du projet
+. un define `TEST_ENABLED` est transmis au compilateur, il sert dans `main()` à modifier le source compilé (gestion du lancement ds test et des options de démarrage en ligne de commande).
+--
++
+Pour activer la construction des tests, lancez le `make` en le préfixant par le positionnement de la variable `WITH_TEST` :
++
+----
+user@host:~/project/Build$ clear;WITH_TEST=1 make x86_64
+----
++ 
+Ajoutez l'option `-B` pour forcer une reconstruction complète et forcée
+
+Spécifications de construction:: La description des spécificités de construction 
+(bibliothèques, define de compilation, options particulières du compilateur, etc.)
+du projet sont écrites dans un fichier Project.mk positionné sur la racine du 
+projet (au-dessus de Build)
+
+Répertoire de construction:: Les résultats de compilation d'édition de liens sont 
+déposés dans le répertoire Build/cache/<archi>.
+
+
+== Mise en œuvre
+La mise en œuvre s'effectue par l'ajout dans le dépôt du projet d'un 
+module git supplémentaire.
+
+cf. la gestion de https://git-scm.com/docs/gitmodules[gitmodule^]
+
+== Utilisation
+=== Configuration de l'environnement de construction
+Pour fonctionner pleinement le système doit disposer d'un fichier Project.mk sur 
+le répertoire racine du projet.
+Ce fichier peut être créé à partir de l'exemple `Build/Project.mk.sample`
+
+Les principales variables de configuration
+
+[cols="m,a,a",options="header,autowidth"]
+|===
+| Variable | Default | Description
+
+| PROJET       | Dir.{nbsp}Project 
+| Nom de l'exécutable qui sera généré, par défaut le nom du
+  répertoire du dépôt te qu'il a été cloné.
+
+| FHS_APP      | $PROJET 
+| Nom du regroupement dans la hiérarchie du système de fichier.
+Il s'agit de la partie située après _opt/svms_.
+
+Par défaut 
+
+| LIBS         | 
+| Liste des bibliothèques nécessaires à l'edition de lien
+
+.Exemple
+   LIBS:=-lz -lflux
+
+| LOCAL_LIBS   | 
+| Variante non encore utilisée
+
+| EXTRA_LIBS   |
+| Variante non encore utilisée
+
+| INCLUDE_PATH | 
+|
+Liste des chemins de recherche des includes supplémentaires.
+
+.Exemple
+   -I path/to/include1 -I path/to/include2
+
+| DEFINE_VARS  | 
+| Liste des defines de compilation
+
+.Exemple
+   -D MON_DEFINE -D 'TOTO="VALUE"'
+
+| DISTRIB_LINK | 
+.2+|
+Variables associées au données de la distribution _ancienne_ méthode.
+
+_Obsolètes_
+| DISTRIB_DIR  | 
+|===
+
+NOTE: Liste sujette à modification... notamment sur la partie des _LIB_
+
+=== Liste des targets disponibles à la compilation.
+Les cibles (targets) principales pour le nom d'une architecture cible. La liste 
+des architectures disponibles correspond aux fichiers disponibles dans le répertoire
+`Build/rules.d`.
+
+[source,bash]
+----
+yann@yco-svms:~/git-space/Build$ make 
+all               clean-armhf       clean-x86_64      dist-fc_arm       i386              pack-eldim
+all-clean         clean-armv5       cortexa9hf        dist-i386         imx25             pack-fc_arm
+all-distrib       clean-armv7       cygwin            dist-imx25        neo3              pack-i386
+all-packages      clean-cortexa9hf  depdir            dist-neo3         nolib             pack-imx25
+all-targets       clean-cygwin      dir               dist-p17          p17               pack-neo3
+arm               clean-eldim       dir_dist          dist-p17s         p17s              pack-p17
+arm64             clean-fc_arm      dist-arm          distrib           package           pack-p17s
+armhf             clean-i386        dist-arm64        dist-rpi          pack-arm          pack-rpi
+armv5             clean-imx25       dist-armhf        dist-sensys       pack-arm64        pack-sensys
+armv7             clean-neo3        dist-armv5        dist-x86_64       pack-armhf        pack-x86_64
+clean             clean-p17         dist-armv7        doxygen           pack-armv5        rpi
+clean-all         clean-p17s        dist-cortexa9hf   eldim             pack-armv7        sensys
+clean-arm         clean-rpi         dist-cygwin       fc_arm            pack-cortexa9hf   src
+clean-arm64       clean-sensys      dist-eldim        pack-cygwin       x86_64
+----
+
+|===
+| Fichier | Target | Description
+
+| arm64.mk 
+| arm64 
+| Chaine croisée arm64 disponible directement sur la cible de compilation 
+(ajout d'architecture et de chaîne de dev croisée) 
+
+| armhf.mk 
+| armhf 
+| Chaine croisée armhf disponible directement sur la cible de compilation 
+(ajout d'architecture et de chaîne de dev croisée) 
+
+| arm.mk 
+| arm 
+| Chaîne de développement croisé pour architecture arm de la carte Pilote12
+issu d'une distribuion yocto
+
+| armv5.mk 
+| armv5 
+| Chaîne de développement croisé pour architecture arm5
+
+_Alias de arm_
+
+| armv7.mk 
+| armv7 
+| Destiné à la cible de la CPU conçues par la société Eldim (obsolète)
+_Alias cortexa9hf_
+
+| cortexa9hf.mk 
+| cortexa9hf 
+| Destiné à la cible de la CPU conçues par la société Eldim (obsolète)
+
+| cygwin.mk 
+| cygwin 
+| Destiné à l'environnement cygwin, déveloopement pour window 
+(obsolète)
+
+| eldim.mk 
+| eldim 
+|  Destiné à la cible de la CPU conçues par la société Eldim (obsolète)
+_Alias cortexa9hf_
+
+| fc_arm.mk 
+| fc_arm 
+|  Destiné à la cible de la CPU conçues par la société Eldim (obsolète)
+_Alias cortexa9hf_
+
+| i386.mk 
+| i386 
+| version PC 32bits
+
+| imx25.mk 
+| imx25 
+| alias sur arm pour carte pilote12 -> arm.mk
+
+| neo3.mk 
+| neo3 
+| Carte friendlyelec nanopineo3 (CPU RK3328)
+_Alias arm64_
+
+| p17.mk 
+| p17 
+| Carte pilote17 distrib dite non sécurisée
+
+| p17s.mk 
+| p17s 
+| Carte pilote17 distrib dite sécurisée
+
+| rpi.mk 
+| rpi 
+| Carte raspberry PI 32bit
+
+| sensys.mk 
+| sensys 
+| Carte Sensys pour trafic (obsolète)
+
+| x86_64.mk 
+| x86_64 
+| Cible PC 64bits
+
+|===
+
+Sur la base de ces cibles sont ajoutées les cibles suivantes
+|===
+| prefix | Description
+
+|     all     | construction pour toutes les cibles possibles
+| all-clean
+all-distrib
+all-packages
+all-targets | application pour toutes les cibles du suffixe   | 
+| clean-<xxx> | nettoyage des élémenst de compilation et d'édition de lien
+| dist-<xxx>  | Création de la distribution en tar gz ancienne mode (obsolète sur les nouveaux projets)
+| pack-<xxx>  | création d'un packaging sous forme d'un shell auto extractible
+| doxygen     | création de la documentation doxygen par extraction des sources 
+| src         | création d'une archive tar gz contenant les sources
+|===
+
+

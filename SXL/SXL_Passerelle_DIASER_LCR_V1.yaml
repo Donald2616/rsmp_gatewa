@@ -1,0 +1,34 @@
+---
+objects:
+  DIASER/LCR Gateway:
+    description: 
+    commands:
+      M0000:
+        description: 
+        arguments:
+          data:
+            type: string
+            description: Message DIASER/LCR envoyé
+        command: sendCommand
+  DIASER/LCR Unit:
+    description: 
+---
+id: Plant id
+version: '1.0'
+date: '2023-06-14'
+description: Plant name
+constructor: 
+created-date: '2023-06-14'
+rsmp-version: '3.2'
+sites:
+  AA+BBCC:
+    description: test demo
+    objects:
+      DIASER/LCR Gateway:
+        G1:
+          componentId: AA+BBCCC=DDDEEFFF
+          ntsObjectId: AA+BBCCC=DDDEEFFF
+      DIASER/LCR Unit:
+        U1:
+          componentId: AA+BBCCC=DDDEEFF1
+          ntsObjectId: AA+BBCCC=DDDEEFFF

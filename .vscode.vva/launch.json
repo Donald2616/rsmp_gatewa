@@ -1,0 +1,39 @@
+{
+    // Use IntelliSense to learn about possible attributes.    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+
+        {
+            "name": "(gdb) Launch",
+            "type": "cppdbg",
+            "request": "launch",
+            // "program": "${workspaceFolder}/test/rsmp-gateway",
+            "program": "${workspaceFolder}/Build/cache/x86_64/rsmp-gateway",
+            // "args": ["--fhs-all=.", "-u", "4"],
+            // "args": ["--fhs-all=.", "-S", "-l", "SUPERVISION_SVMS","-p", "CLI3NT_01"],
+            // "args": ["--fhs-all=.", "-f", "127.0.0.1:12111", "-l", "CLI3NT_01", "-p", "SUPERVISION_SVMS"],
+            // "args": ["--fhs-all=.", "-f", "185.252.130.10:12111", "-l", "CLIENT_SVMS", "-p", "SUPERVISION/IROAD"],
+            "args": ["--fhs-all=.", "-u", "2"],
+            "stopAtEntry": false,
+            // "cwd": "${fileDirname}",
+            // "cwd": "${workspaceFolder}/testServer",
+            "cwd": "${workspaceFolder}/test",
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ]
+        }
+
+    ]
+}
